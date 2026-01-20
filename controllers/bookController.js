@@ -1,7 +1,7 @@
-const pool = require('../db');
+// const pool = require('../db');
+import  Pool  from "../db/index.js";
 
-
-exports.createBook = async (req, res) => {
+export const createBook = async (req, res) => {
   try {
     const { title, author, published_year } = req.body;
     const result = await pool.query(
@@ -15,7 +15,7 @@ exports.createBook = async (req, res) => {
 };
 
 
-exports.getBooks = async (req, res) => {
+export const getBooks = async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM books ORDER BY id');
     res.json(result.rows);
@@ -25,7 +25,7 @@ exports.getBooks = async (req, res) => {
 };
 
 
-exports.getBookById = async (req, res) => {
+export const getBookById = async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('SELECT * FROM books WHERE id = $1', [id]);
@@ -41,7 +41,7 @@ exports.getBookById = async (req, res) => {
 };
 
 
-exports.updateBook = async (req, res) => {
+export const updateBook = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, author, published_year } = req.body;
@@ -61,7 +61,7 @@ exports.updateBook = async (req, res) => {
 };
 
 
-exports.deleteBook = async (req, res) => {
+export const deleteBook = async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('DELETE FROM books WHERE id = $1 RETURNING *', [id]);
