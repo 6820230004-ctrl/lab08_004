@@ -1,5 +1,4 @@
-// const pool = require('../db');
-import  Pool  from "../db/index.js";
+import pool from "../db/index.js";
 
 export const createBook = async (req, res) => {
   try {

@@ -4,13 +4,14 @@ import pool from "../db/index.js";
 
 
 export const register = async (req, res) => {
+
    const { username, password, name, role } = req.body;
    try {
 
      const insertSql = `
-     INSERT INTO users (user_name, password, name ,role)
+     INSERT INTO users (username, password, name ,role)
      VALUES ($1, $2, $3, $4)
-     RETURNING id, user_name
+     RETURNING id, username
      `;
 
      const hashed = await bcrypt.hash(password, 10);
@@ -21,4 +22,65 @@ export const register = async (req, res) => {
    } catch (err) {
       res.status(400).send(err.message);
    }
+};
+
+export const login = async (req, res) => {
+   const { username, password } = req.body ?? {}
+   if (!username || !password){
+      return res.status(400).json({message: "Username & password are required."});
+   }
+   try {
+      const { rows } = await pool.query(
+         `SELECT id, username, password, role FROM users WHERE username = $1 LIMIT 1 `,
+         [username],
+      );
+
+      const user = rows[0];
+      if (!user) {
+         return res.status(400).json({ message: "User not found" });
+         
+      }
+      const ok = await bcrypt.compare(password, user.password);
+      if(!ok) return res.status(400).json({message: "Wrong password"});
+
+      const accessToken = jwt.sign(
+         {userId: user.id, username: user.username, role: user.role},
+         process.env.ACCESS_TOKEN_SECRET,
+         {expiresIn: "5m"}
+      );
+      const refreshToken = jwt.sign(
+         {userId: user.id, username: user.username, role: user.role},
+         process.env.REFRESH_TOKEN_SECRET,
+         {expiresIn: "1h"}
+      );
+   return res.json({ accessToken, refreshToken });
+   } catch (err) {
+   return res.status(500).json({ message: err.message });
+   }
+};
+
+export const refresh = async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(401).json({ message: "Refresh token required" });
+  }
+
+  try {
+    jwt.verify(token, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
+      if (err) {
+        return res.status(403).json({ message: "Invalid refresh token" });
+      }
+
+      const accessToken = jwt.sign(
+        { userId: user.userId, username: user.username, role: user.role },
+        process.env.ACCESS_TOKEN_SECRET,
+        { expiresIn: "5m" }
+      );
+
+      res.json({ accessToken });
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
