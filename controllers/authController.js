@@ -7,18 +7,29 @@ export const register = async (req, res) => {
 
    const { username, password, name, role } = req.body;
    try {
+      const checkUserSql = `
+      SELECT id FROM users WHERE username = $1
+      `;
+      
+      const existingUser = await pool.query(checkUserSql, [username]);
+      
+      if (existingUser.rows.length > 0) {
+         return res.status(400).json({ 
+            message: "Username นี้มีผู้ใช้งานแล้ว" 
+         });
+      }
 
-     const insertSql = `
-     INSERT INTO users (username, password, name ,role)
-     VALUES ($1, $2, $3, $4)
-     RETURNING id, username
-     `;
+      const insertSql = `
+      INSERT INTO users (username, password, name, role)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, username
+      `;
 
-     const hashed = await bcrypt.hash(password, 10);
+      const hashed = await bcrypt.hash(password, 10);
 
-     const result = await pool.query(insertSql, [username, hashed, name, role]);
-     const user = result.rows[0];
-     res.status(201).json({message: "User registered",user});
+      const result = await pool.query(insertSql, [username, hashed, name, role]);
+      const user = result.rows[0];
+      res.status(201).json({message: "User registered", user});
    } catch (err) {
       res.status(400).send(err.message);
    }
@@ -46,7 +57,7 @@ export const login = async (req, res) => {
       const accessToken = jwt.sign(
          {userId: user.id, username: user.username, role: user.role},
          process.env.ACCESS_TOKEN_SECRET,
-         {expiresIn: "5m"}
+         {expiresIn: "15m"}
       );
       const refreshToken = jwt.sign(
          {userId: user.id, username: user.username, role: user.role},
@@ -75,7 +86,7 @@ export const refresh = async (req, res) => {
       const accessToken = jwt.sign(
         { userId: user.userId, username: user.username, role: user.role },
         process.env.ACCESS_TOKEN_SECRET,
-        { expiresIn: "5m" }
+        { expiresIn: "15m" }
       );
 
       res.json({ accessToken });
